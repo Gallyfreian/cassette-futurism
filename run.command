@@ -11,6 +11,9 @@ bold=$'\033[1m'; dim=$'\033[2m'; amber=$'\033[38;5;208m'; off=$'\033[0m'
 
 hr() { printf '%s\n' "$dim------------------------------------------------------------$off"; }
 
+# cancelled "$value" -> true if the user typed b / back
+cancelled() { case "$1" in b|B|back|BACK) return 0 ;; *) return 1 ;; esac; }
+
 # ask "prompt" "default" -> echoes the answer
 ask() {
     local prompt="$1" default="$2" reply
@@ -72,16 +75,21 @@ do_wallpapers() {
     echo
     echo "${bold}Wallpapers${off}"
     local size count pal crt busy
+    echo "${dim}(type b at any prompt to go back)${off}"
     size=$(pick "Resolution?" 1 \
         "5120x1440" "3840x2160" "3456x2234" "2560x1600" "custom")
+    cancelled "$size" && return
     if [ "$size" = "custom" ]; then
         size=$(ask "  Width x height, e.g. 3440x1440:" "3840x2160")
+        cancelled "$size" && return
     fi
-    count=$(ask "How many?" 5)
+    count=$(ask "How many?" 5); cancelled "$count" && return
     echo "Palette (blank = random per image):"
     pal=$(pick "  Which?" "random" $PALETTES "random")
-    crt=$(ask "CRT bulge, 0 = flat:" 0.14)
+    cancelled "$pal" && return
+    crt=$(ask "CRT bulge, 0 = flat:" 0.14); cancelled "$crt" && return
     busy=$(ask "Clutter, 0.2 sparse .. 1.0 dense:" 0.55)
+    cancelled "$busy" && return
 
     local args="--size $size --count $count --crt $crt --busy $busy"
     [ "$pal" != "random" ] && args="$args --palette $pal"
@@ -97,8 +105,9 @@ do_icons() {
     echo
     echo "${bold}Icons${off}"
     local pal crt icns
-    pal=$(pick "Palette?" 1 $PALETTES)
-    crt=$(ask "CRT bulge, 0 = flat:" 0.18)
+    echo "${dim}(type b at any prompt to go back)${off}"
+    pal=$(pick "Palette?" 1 $PALETTES); cancelled "$pal" && return
+    crt=$(ask "CRT bulge, 0 = flat:" 0.18); cancelled "$crt" && return
     printf '%s' "Also build .icns files? [Y/n] "; read -r icns
 
     local args="--palette $pal --crt $crt"
@@ -114,11 +123,12 @@ do_icons() {
 }
 
 # ------------------------------------------------------------------ menu
+trap 'echo; echo "${dim}Interrupted.${off}"' INT
 while true; do
     echo
     choice=$(pick "What would you like to make?" 1 \
         "wallpapers" "icons" "both" "quit")
-    [ -z "$choice" ] && { echo; exit 0; } # EOF / ctrl-D
+    [ -z "$choice" ] && { echo; exit 0; }          # EOF / ctrl-D
     case "$choice" in
         wallpapers) do_wallpapers ;;
         icons)      do_icons ;;

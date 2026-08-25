@@ -476,4 +476,8 @@ def main():
                 print(os.path.join(a.out, f"{safe}.icns"))
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+        sys.exit(130)

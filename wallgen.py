@@ -9,7 +9,7 @@ scanlines, aperture mask, vignette.
   python3 wallgen.py --size 3456x2234 --seed 91 --palette green --crt 0.18
   python3 wallgen.py --size 3840x2160 --flat --count 4
 """
-import argparse, math, os, random
+import argparse, math, os, random, sys
 from functools import lru_cache
 
 import numpy as np
@@ -687,4 +687,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+        sys.exit(130)
