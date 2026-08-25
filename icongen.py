@@ -9,7 +9,7 @@ Requires wallgen.py alongside it (reuses the Canvas, palettes and bloom).
   python3 icongen.py --out ./icons --map "Chrome=globe,VS Code=code,dev-work=folder"
   python3 icongen.py --list
 """
-import argparse, math, os, sys
+import argparse, math, os, shutil, subprocess, sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -367,6 +367,51 @@ def make_icon(glyph, size=1024, palette="amber", label=None,
     rgba = np.dstack([np.clip(img, 0, 255), np.clip(alpha, 0, 1) * 255]).astype(np.uint8)
     return Image.fromarray(rgba, "RGBA")
 
+# --------------------------------------------------------------------- icns
+# Apple's iconset needs these exact filenames. Small renditions are drawn
+# fresh at their target size rather than downscaled, so line weights and
+# scanlines stay legible instead of turning to mush.
+ICNS_SIZES = [
+    (16, "icon_16x16"), (32, "icon_16x16@2x"),
+    (32, "icon_32x32"), (64, "icon_32x32@2x"),
+    (128, "icon_128x128"), (256, "icon_128x128@2x"),
+    (256, "icon_256x256"), (512, "icon_256x256@2x"),
+    (512, "icon_512x512"), (1024, "icon_512x512@2x"),
+]
+
+
+def _detail_for(px, scan, scan_lines, crt):
+    """Dial back tube effects on renditions too small to carry them."""
+    if px <= 32:
+        return 0.0, scan_lines, crt * 0.35
+    if px <= 64:
+        return scan * 0.5, max(10, scan_lines // 3), crt * 0.6
+    if px <= 128:
+        return scan * 0.8, max(16, scan_lines // 2), crt * 0.85
+    return scan, scan_lines, crt
+
+
+def build_icns(glyph, out_path, palette="amber", label=None,
+               scan=0.30, scan_lines=34, crt=0.12):
+    """Render every rendition, then hand the iconset to iconutil."""
+    if shutil.which("iconutil") is None:
+        print(f"  skipping {out_path}: iconutil not found (macOS only)")
+        return False
+
+    stem = os.path.splitext(out_path)[0]
+    iconset = stem + ".iconset"
+    os.makedirs(iconset, exist_ok=True)
+    try:
+        for px, name in ICNS_SIZES:
+            s, sl, k = _detail_for(px, scan, scan_lines, crt)
+            img = make_icon(glyph, px, palette, label=label if px >= 256 else None,
+                            scan=s, scan_lines=sl, crt=k)
+            img.save(os.path.join(iconset, name + ".png"))
+        subprocess.run(["iconutil", "-c", "icns", iconset, "-o", out_path],
+                       check=True)
+        return True
+    finally:
+        shutil.rmtree(iconset, ignore_errors=True)
 
 DEFAULT_MAP = {
     "Folder": "folder", "Terminal": "terminal", "Browser": "globe",
@@ -391,11 +436,13 @@ def main():
                     help="print the name across the bottom of each icon")
     ap.add_argument("--crt", type=float, default=0.12,
                     help="tube bulge: 0 flat, 0.12 default, 0.25 strong")
-    ap.add_argument("--scan", type=float, default=0.22,
+    ap.add_argument("--scan", type=float, default=0.30,
                     help="scanline depth, 0 off .. 0.5 heavy")
     ap.add_argument("--scan-lines", type=int, default=34,
                     help="how many scanlines across the icon (fewer = chunkier, "
                          "survives Dock downscaling)")
+    ap.add_argument("--icns", action="store_true",
+                help="also build a multi-resolution .icns (macOS only)")
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
 
@@ -422,6 +469,15 @@ def main():
         img.save(path)
         print(path)
 
+        if a.icns:
+            if build_icns(gl, os.path.join(a.out, f"{safe}.icns"), a.palette,
+                            label=name if a.label else None,
+                            scan=a.scan, scan_lines=a.scan_lines, crt=a.crt):
+                print(os.path.join(a.out, f"{safe}.icns"))
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+        sys.exit(130)

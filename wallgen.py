@@ -9,7 +9,7 @@ scanlines, aperture mask, vignette.
   python3 wallgen.py --size 3456x2234 --seed 91 --palette green --crt 0.18
   python3 wallgen.py --size 3840x2160 --flat --count 4
 """
-import argparse, math, os, random
+import argparse, math, os, random, sys
 from functools import lru_cache
 
 import numpy as np
@@ -649,9 +649,12 @@ def render(W, H, seed=None, palette=None, crt_k=0.14, busy=0.55,
         img += np.random.default_rng(seed or 0).normal(
             0, 3.0, (H, W, 1)).astype(np.float32)
 
-    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(out)
+     # write to a temp name first: an interrupt mid-save would otherwise
+    # leave a truncated PNG behind
+    tmp = out + ".part"
+    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(tmp, format="PNG")
+    os.replace(tmp, out)
     return pal
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -671,7 +674,7 @@ def main():
                     help="scanline period in output pixels (4 at 4K, 2.5 at 1080p)")
     ap.add_argument("--wordmark", default=None,
                     help="fixed wordmark text, or 'none' to omit it")
-    ap.add_argument("--out", default=".")
+    ap.add_argument("--out", default="./wallpapers")
     a = ap.parse_args()
 
     W, H = (int(t) for t in a.size.lower().split("x"))
@@ -687,4 +690,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+        sys.exit(130)
