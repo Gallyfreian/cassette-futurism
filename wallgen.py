@@ -671,7 +671,7 @@ def main():
                     help="scanline period in output pixels (4 at 4K, 2.5 at 1080p)")
     ap.add_argument("--wordmark", default=None,
                     help="fixed wordmark text, or 'none' to omit it")
-    ap.add_argument("--out", default=".")
+    ap.add_argument("--out", default="./wallpapers")
     a = ap.parse_args()
 
     W, H = (int(t) for t in a.size.lower().split("x"))
