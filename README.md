@@ -12,7 +12,7 @@ Couldn't find any wallpaper I liked for ultrawide res in this style, it was neve
 Requires Python 3.9+.
 
 ```bash
-git clone https://github.com/Gallyfreian/casette-futurism
+git clone https://github.com/Gallyfreian/cassette-futurism
 cd cassette-futurism
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt

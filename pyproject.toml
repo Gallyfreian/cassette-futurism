@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cassette-futurism"
+version = "0.1.0"
+description = "Procedural cassette-futurism wallpapers and macOS icons"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "Laogaeth" }]
+keywords = ["wallpaper", "generative-art", "macos", "crt", "icons"]
+dependencies = ["pillow>=10.0", "numpy>=1.24"]
+
+[project.urls]
+Homepage = "https://github.com/Gallyfreian/cassette-futurism"
+
+[project.scripts]
+wallgen = "wallgen:main"
+icongen = "icongen:main"
+
+[tool.setuptools]
+py-modules = ["wallgen", "icongen"]
