@@ -24,7 +24,7 @@ without one fails with `externally-managed-environment`.
 ## Wallpapers
 
 ```bash
-python3 wallgen.py --size 5120x1440 --count 20 --out ./out
+python3 wallgen.py --size 5120x1440 --count 20
 python3 wallgen.py --size 3456x2234 --seed 7048 --palette amber
 python3 wallgen.py --size 3840x2160 --crt 0.22 --busy 0.9 --palette blood
 ```
@@ -101,6 +101,23 @@ App icons set this way are wiped when the app updates, so keep the folder around
   Consolas. If none resolve, add a path to `_FONTS` in `wallgen.py`.
 - The corner radius is 22.37% of the tile, Apple's squircle ratio, but approximated
   with a rounded rectangle rather than a true superellipse.
+
+## Preview
+
+### Wallpapers
+
+<p align="center">
+  <img src="docs/preview-wallpaper.jpg" alt="Wallpaper preview" width="100%">
+</p>
+<p align="center">
+  <img src="docs/preview-wallpaper2.jpg" alt="Wallpaper preview" width="100%">
+</p>
+
+### Icons
+
+<p align="center">
+  <img src="docs/preview-icons.jpg" alt="Wallpaper preview" width="100%">
+</p>
 
 ## Licence
 
