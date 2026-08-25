@@ -649,9 +649,12 @@ def render(W, H, seed=None, palette=None, crt_k=0.14, busy=0.55,
         img += np.random.default_rng(seed or 0).normal(
             0, 3.0, (H, W, 1)).astype(np.float32)
 
-    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(out)
+     # write to a temp name first: an interrupt mid-save would otherwise
+    # leave a truncated PNG behind
+    tmp = out + ".part"
+    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(tmp, format="PNG")
+    os.replace(tmp, out)
     return pal
-
 
 def main():
     ap = argparse.ArgumentParser()
