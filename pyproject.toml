@@ -21,4 +21,4 @@ wallgen = "wallgen:main"
 icongen = "icongen:main"
 
 [tool.setuptools]
-py-modules = ["wallgen", "icongen"]
+py-modules = ["wallgen", "icongen", "terminal_scenes", "mission_scenes", "launcher"]
