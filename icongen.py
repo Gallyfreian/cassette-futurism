@@ -272,7 +272,76 @@ def g_grid(c, b, lw):
                                (gy + h / n - h * 0.06) * c.ss], fill=235)
 
 
+def g_cassette(c, b, lw):
+    x,y,w,h=b
+    c.rect(x,y+h*.17,x+w,y+h*.83,lw)
+    c.rect(x+w*.12,y+h*.28,x+w*.88,y+h*.60,lw*.7,190)
+    for a in (.30,.70):
+        c.circle(x+w*a,y+h*.44,w*.095,lw)
+        c.circle(x+w*a,y+h*.44,w*.032,lw*.7,180)
+    c.line([(x+w*.18,y+h*.83),(x+w*.26,y+h*.67),
+            (x+w*.74,y+h*.67),(x+w*.82,y+h*.83)],lw*.8)
+
+
+def g_chip(c, b, lw):
+    x,y,w,h=b
+    c.rect(x+w*.23,y+h*.23,x+w*.77,y+h*.77,lw)
+    c.rect(x+w*.36,y+h*.36,x+w*.64,y+h*.64,lw*.7,180)
+    for a in (.32,.5,.68):
+        for lo,hi in ((.08,.23),(.77,.92)):
+            c.line([(x+w*a,y+h*lo),(x+w*a,y+h*hi)],lw)
+            c.line([(x+w*lo,y+h*a),(x+w*hi,y+h*a)],lw)
+
+
+def g_floppy(c, b, lw):
+    x,y,w,h=b
+    c.line([(x+w*.1,y+h*.08),(x+w*.78,y+h*.08),(x+w*.9,y+h*.2),
+            (x+w*.9,y+h*.92),(x+w*.1,y+h*.92),(x+w*.1,y+h*.08)],lw)
+    c.rect(x+w*.27,y+h*.08,x+w*.68,y+h*.39,lw*.8)
+    c.rect(x+w*.24,y+h*.57,x+w*.76,y+h*.92,lw*.8)
+    c.line([(x+w*.58,y+h*.15),(x+w*.58,y+h*.31)],lw*1.5)
+
+
+def g_monitor(c, b, lw):
+    x,y,w,h=b
+    c.rect(x+w*.05,y+h*.08,x+w*.95,y+h*.72,lw)
+    c.rect(x+w*.14,y+h*.17,x+w*.86,y+h*.59,lw*.7,180)
+    c.line([(x+w*.5,y+h*.72),(x+w*.5,y+h*.90)],lw)
+    c.line([(x+w*.28,y+h*.90),(x+w*.72,y+h*.90)],lw)
+    c.line([(x+w*.24,y+h*.32),(x+w*.34,y+h*.39),(x+w*.24,y+h*.46)],lw)
+
+
+def g_satellite(c, b, lw):
+    x,y,w,h=b
+    c.rect(x+w*.4,y+h*.3,x+w*.6,y+h*.7,lw)
+    for a in (.03,.66):
+        c.rect(x+w*a,y+h*.35,x+w*(a+.31),y+h*.65,lw)
+        for i in (1,2):
+            xx=x+w*(a+.31*i/3)
+            c.line([(xx,y+h*.35),(xx,y+h*.65)],lw*.6,160)
+    c.line([(x+w*.34,y+h*.5),(x+w*.4,y+h*.5)],lw)
+    c.line([(x+w*.6,y+h*.5),(x+w*.66,y+h*.5)],lw)
+    c.line([(x+w*.5,y+h*.3),(x+w*.5,y+h*.13),(x+w*.66,y+h*.06)],lw)
+
+
+def make_mono_icon(glyph, size=1024, ss=3):
+    """Unbaked white foreground for monochrome appearance experiments.
+
+    This is a flat custom icon, not an Icon Composer appearance asset.
+    """
+    c=Canvas(size,size,ss)
+    GLYPHS[glyph](c,(size*.21,size*.21,size*.58,size*.58),max(.85,size/65))
+    alpha=c.img.resize((size,size),Image.LANCZOS)
+    # Remove luminance hierarchy: all surviving strokes have equal coverage.
+    alpha=alpha.point(lambda v: min(255,round(v*1.8)))
+    im=Image.new('RGBA',(size,size),(255,255,255,0))
+    im.putalpha(alpha)
+    return im
+
+
 GLYPHS = {
+    "cassette": g_cassette, "chip": g_chip, "floppy": g_floppy,
+    "monitor": g_monitor, "satellite": g_satellite,
     "folder": g_folder, "terminal": g_terminal, "globe": g_globe, "code": g_code,
     "compass": g_compass, "starburst": g_starburst, "disc": g_disc,
     "chat": g_chat, "person": g_person_scan, "document": g_document,
@@ -283,7 +352,9 @@ GLYPHS = {
 
 def make_icon(glyph, size=1024, palette="amber", label=None,
               inset=0.055, radius=0.2237, scan=0.30, scan_lines=34, crt=0.12,
-              ca=0.008, ss=2):
+              ca=0.008, ss=2, style="phosphor"):
+    if style == "mono":
+        return make_mono_icon(glyph, size)
     p = PALETTES[palette]
     S = size
     Sf = crt_geometry(S, S, crt)[1] if crt > 0 else 1.0
@@ -364,6 +435,9 @@ def make_icon(glyph, size=1024, palette="amber", label=None,
         alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8))
                            .resize((S, S), Image.LANCZOS)).astype(np.float32) / 255.0
 
+    # Resampling uses premultiplied RGB; PNG stores straight (unassociated) RGB.
+    img = np.divide(img, alpha[..., None], out=np.zeros_like(img),
+                    where=alpha[..., None] > 1e-6)
     rgba = np.dstack([np.clip(img, 0, 255), np.clip(alpha, 0, 1) * 255]).astype(np.uint8)
     return Image.fromarray(rgba, "RGBA")
 
@@ -392,23 +466,37 @@ def _detail_for(px, scan, scan_lines, crt):
 
 
 def build_icns(glyph, out_path, palette="amber", label=None,
-               scan=0.30, scan_lines=34, crt=0.12):
+               scan=0.30, scan_lines=34, crt=0.12, style="phosphor"):
     """Render every rendition, then hand the iconset to iconutil."""
-    if shutil.which("iconutil") is None:
-        print(f"  skipping {out_path}: iconutil not found (macOS only)")
-        return False
-
     stem = os.path.splitext(out_path)[0]
     iconset = stem + ".iconset"
     os.makedirs(iconset, exist_ok=True)
     try:
+        renditions = {}
         for px, name in ICNS_SIZES:
             s, sl, k = _detail_for(px, scan, scan_lines, crt)
             img = make_icon(glyph, px, palette, label=label if px >= 256 else None,
-                            scan=s, scan_lines=sl, crt=k)
+                            scan=s, scan_lines=sl, crt=k, style=style)
             img.save(os.path.join(iconset, name + ".png"))
-        subprocess.run(["iconutil", "-c", "icns", iconset, "-o", out_path],
-                       check=True)
+            renditions[px] = img
+        result = None
+        if shutil.which("iconutil"):
+            result = subprocess.run(
+                ["iconutil", "-c", "icns", iconset, "-o", out_path],
+                capture_output=True, text=True)
+        if result is None or result.returncode != 0:
+            reason = "unavailable" if result is None else "rejected the iconset"
+            print(f"  iconutil {reason}; using Pillow ICNS writer (32–1024px)")
+            # Pillow accepts the freshly drawn renditions rather than resizing
+            # the 1024px artwork. Its writer does not include a 16px entry.
+            tmp = out_path + ".part"
+            try:
+                renditions[1024].save(tmp, format="ICNS",
+                    append_images=[renditions[px] for px in sorted(renditions) if px >= 32])
+                os.replace(tmp, out_path)
+            finally:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
         return True
     finally:
         shutil.rmtree(iconset, ignore_errors=True)
@@ -421,11 +509,15 @@ DEFAULT_MAP = {
     "Trash": "bin", "Settings": "gear", "Audio": "waveform",
     "Data": "database", "Stats": "chart", "Certs": "lock",
     "Network": "network", "Mail": "mail", "Apps": "grid",
+    "Tapes": "cassette", "Processor": "chip", "Save": "floppy",
+    "Display": "monitor", "Telemetry": "satellite",
 }
 
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--style", choices=("phosphor", "mono"), default="phosphor",
+                    help="mono: bold white foreground on transparency, no baked CRT effects")
     ap.add_argument("--out", default="./icons")
     ap.add_argument("--size", type=int, default=1024)
     ap.add_argument("--palette", default="amber",
@@ -442,7 +534,7 @@ def main():
                     help="how many scanlines across the icon (fewer = chunkier, "
                          "survives Dock downscaling)")
     ap.add_argument("--icns", action="store_true",
-                help="also build a multi-resolution .icns (macOS only)")
+                help="also build a multi-resolution .icns")
     ap.add_argument("--list", action="store_true")
     a = ap.parse_args()
 
@@ -463,7 +555,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     for name, gl in pairs:
         img = make_icon(gl, a.size, a.palette,
-                        label=name if a.label else None, crt=a.crt, scan=a.scan, scan_lines=a.scan_lines)
+                        label=name if a.label else None, crt=a.crt, scan=a.scan, scan_lines=a.scan_lines, style=a.style)
         safe = name.replace("/", "-").replace(" ", "_")
         path = os.path.join(a.out, f"{safe}.png")
         img.save(path)
@@ -472,7 +564,7 @@ def main():
         if a.icns:
             if build_icns(gl, os.path.join(a.out, f"{safe}.icns"), a.palette,
                             label=name if a.label else None,
-                            scan=a.scan, scan_lines=a.scan_lines, crt=a.crt):
+                            scan=a.scan, scan_lines=a.scan_lines, crt=a.crt, style=a.style):
                 print(os.path.join(a.out, f"{safe}.icns"))
 
 if __name__ == "__main__":
