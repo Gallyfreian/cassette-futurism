@@ -26,7 +26,8 @@ A Finder window opens. Double-click **`run.command`** and follow the prompts.
 
 ### What `run.command` actually does
 
-It's a plain shell script, [read it here](run.command) before running it.
+It uses a small [setup shell script](run.command), then starts the
+[Python terminal console](launcher.py). Both are readable source.
 
 On **first run** it will:
 
@@ -40,18 +41,37 @@ On **first run** it will:
 To undo it completely, delete the `.venv` folder, or delete the whole project
 directory. There's no uninstaller because there's nothing to uninstall.
 
-On **every run** it shows a menu:
+On **every run** it opens a phosphor-styled control console: dark background,
+framed panels, mission descriptions, a render manifest and file-count progress.
+Choose **Theme** to switch the interface between green, amber, ice, blood and
+bone; this is independent of the palette used for generated images. The console
+uses the Python standard library and does not modify your Terminal profile or
+shell configuration.
+
+[Preview the console](docs/preview-console.png).
+
+The menu offers:
 
 - **Wallpapers** — asks for resolution (or a custom one), how many, palette,
-  CRT bulge, clutter density
+  CRT bulge, clutter density and an optional reproducible seed
 - **Icons** — asks for palette, CRT bulge, whether to build `.icns` files
 - **Both**
 - **Quit**
+- **Theme** — change the console color for this session
 
 Answers accept either the option number or the name. Pressing return or enter
 without inputing anything takes the default shown in brackets.
 Output goes to `wallpapers/` or `icons/`, and the
 folder opens when it's finished.
+
+Review the settings in the render manifest, then press Enter to render.
+Output files with matching names are replaced, as with the generator CLIs.
+
+Run `./run.command --theme amber` to start in amber, or `./run.command --plain`
+for a plain-text interface. `NO_COLOR`, redirected input/output and terminals
+without ANSI support automatically use plain text. The styled console restores
+the previous screen and resets its colors when it exits. Window size is checked
+on each screen; narrow windows wrap the content.
 
 Type `b` then `enter` at any prompt to return to the main menu. Ctrl-C during a render
 stops it and returns to the menu too.
@@ -104,6 +124,7 @@ python3 wallgen.py --size 3840x2160 --crt 0.22 --busy 0.9 --palette blood
 
 | flag         | default        | what it does                                                        |
 | ------------ | -------------- | ------------------------------------------------------------------- |
+| `--scene`    | `auto`         | terminal subject; choose one of the nine below, or `legacy`          |
 | `--size`     | `5120x1440`    | `WIDTHxHEIGHT`. Layout switches to the wide composition above 2.0:1 |
 | `--count`    | `1`            | number of images; each gets a consecutive seed                      |
 | `--seed`     | random         | reproduces a specific image                                         |
@@ -116,9 +137,51 @@ python3 wallgen.py --size 3840x2160 --crt 0.22 --busy 0.9 --palette blood
 | `--wordmark` | random         | fixed text, or `none` to omit                                       |
 | `--out`      | `./wallpapers` | output directory                                                    |
 
-Six hero elements (wireframe globe, radar scope, perspective horizon, orbital system,
-targeting reticle, oscilloscope), ten instrument widgets scattered into a slot grid,
-three rail styles.
+The default now chooses between nine composed terminal subjects. Each has a
+substantial central drawing, fixed panel hierarchy, related telemetry, and quiet
+margins for the menu bar and Dock:
+
+- `--scene ship`: axonometric service tug with pressure hull, engine pods and annotations.
+- `--scene archive`: reel transport with tape path, heads and mechanical controls.
+- `--scene survey`: connected terrain mesh and survey readouts.
+- `--scene tracking`: wireframe Earth, inclined orbit, ground stations and ground track.
+- `--scene launch`: staged launch vehicle with altitude and velocity histories.
+- `--scene probe`: deep-space spacecraft with steerable dish, arrays and instrument boom.
+- `--scene docking`: station approach corridor, alignment crosshair and position plot.
+- `--scene comms`: tracking antenna with pointing geometry and receiver spectrum.
+- `--scene descent`: lunar terrain profile, lander, landing target and predicted descent.
+- `--scene auto`: seeded choice of all nine (default).
+- `--scene legacy`: the original six abstract heroes and scattered widgets.
+
+```bash
+python3 wallgen.py --size 5120x1440 --scene ship --seed 7048 --palette green
+python3 wallgen.py --size 3456x2234 --scene archive --seed 7048 --palette amber
+python3 wallgen.py --size 5120x1440 --scene tracking --seed 91 --palette green
+python3 wallgen.py --size 3456x2234 --scene probe --seed 7048 --palette amber
+```
+
+The six mission scenes use fictional, illustrative engineering data. Each seed
+changes geometry and mission state together: orbit altitude sets the plotted
+radius, docking offsets set the crosshair and alignment status, and radar
+altitude sets the lander's height above its terrain. Vehicle configuration,
+antenna pointing, array count, flight phase and signal acquisition also vary.
+These are coherent terminal illustrations, not flight simulations or historical
+NASA screen reproductions.
+
+See the [labeled mission collection](docs/preview-missions.jpg) for all six scenes
+in green and amber with different seeds. Full-size review renders are generated
+locally under `out/missions/`.
+
+Expanding the `auto` pool changes which scene an earlier automatic seed selects.
+Use an explicit `--scene` to reproduce a particular subject. The existing three
+explicit scenes retain their rendering behavior.
+
+`--busy` controls optional terminal detail in the new scenes and widget density
+in legacy mode. Seeds reproduce output for the same generator version, scene,
+and render options. Existing legacy seeds can be rendered with `--scene legacy`.
+
+Preview the [tape archive](docs/preview-wallpaper-archive.jpg) and
+[terrain survey](docs/preview-wallpaper-survey.jpg).
 
 ## Icons
 
@@ -142,9 +205,10 @@ python3 icongen.py --icns --map "Chrome=globe,dev-work=code,Certs=lock"
 | `--scan-lines` | `34`         | lines across the tile, counted so they survive Dock downscaling     |
 | `--icns`       | off          | also build a multi-resolution `.icns` (macOS only)                  |
 
-21 glyphs: `folder`, `terminal`, `globe`, `code`, `compass`, `starburst`, `disc`,
+26 glyphs: `folder`, `terminal`, `globe`, `code`, `compass`, `starburst`, `disc`,
 `chat`, `person`, `document`, `aperture`, `film`, `bin`, `gear`, `waveform`,
-`database`, `chart`, `lock`, `network`, `mail`, `grid`.
+`database`, `chart`, `lock`, `network`, `mail`, `grid`, `cassette`, `chip`,
+`floppy`, `monitor`, `satellite`.
 
 Output is 1024×1024 RGBA with the squircle as the alpha channel, so it sits on the
 Dock without a black box.
@@ -152,6 +216,36 @@ Dock without a black box.
 With `--icns`, each rendition (16px up to 1024px) is drawn fresh at its target
 size rather than downscaled, with scanlines and bulge reduced on the small ones so
 they stay legible in the sidebar and Finder list view.
+
+If Apple’s `iconutil` is unavailable or rejects the iconset, export falls back
+to Pillow using the freshly drawn 32–1024px renditions. That fallback omits the
+separate 16px rendition.
+
+### Clear icon appearance (experimental)
+
+[Monochrome icon preview](docs/preview-icons-mono.jpg).
+
+The phosphor style bakes a dark tile, bloom, thin strokes and scanlines into a
+flat image. It is designed for the default Dock appearance. macOS Clear styling
+can reinterpret that artwork and lose its contrast. Apple supports explicit
+mono/clear variants through layered Icon Composer assets; a custom Finder
+PNG/ICNS replacement does not provide those appearance variants.
+
+Try the simpler foreground export in a separate folder:
+
+```bash
+python3 icongen.py --style mono --icns --out icons/mono
+```
+
+`mono` draws thicker white strokes on transparency, without a tile, border,
+bloom, scanlines, barrel distortion or labels. Palette and CRT options apply
+only to `phosphor`. This export is an experiment for checking on your own Dock,
+not a native Liquid Glass icon or a promise of Clear compatibility. Both
+styles are ordinary replacement icons; no application bundles or system
+appearance settings are modified by the generator.
+
+See [Apple's Icon Composer documentation](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer)
+for native default, dark and mono appearances.
 
 ### Applying icons on macOS
 
@@ -185,9 +279,17 @@ This is true of `.icns` too; the format makes no difference.
   Consolas. If none resolve, add a path to `_FONTS` in `wallgen.py`.
 - The corner radius is 22.37% of the tile, Apple's squircle ratio, but approximated
   with a rounded rectangle rather than a true superellipse.
-- `run.command` and `--icns` are macOS-only. The generators themselves run fine on
-  Linux and Windows; `--icns` prints a notice and skips.
+- `run.command` is macOS-only. PNG and ICNS generation also work on Linux and
+  Windows; ICNS export uses Pillow when Apple’s `iconutil` is unavailable.
 
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
+
+
+## Development checks
+
+```bash
+python3 -m unittest discover -s tests
+bash -n run.command
+```
