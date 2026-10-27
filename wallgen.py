@@ -11,6 +11,7 @@ scanlines, aperture mask, vignette.
 """
 import argparse, math, os, random, sys
 from functools import lru_cache
+from terminal_scenes import compose_terminal, SCENES
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -604,7 +605,7 @@ def crt(src, W, H, k=0.14, ax=None, ca=0.006, scan=0.34, scan_px=4.0, mask=0.09,
 
 # ---------------------------------------------------------------- renderer
 def render(W, H, seed=None, palette=None, crt_k=0.14, busy=0.55,
-           grain=True, wordmark=None, scan=0.34, scan_px=4.0, out="out.png"):
+           grain=True, wordmark=None, scan=0.34, scan_px=4.0, out="out.png", scene="auto"):
     rng = random.Random(seed)
     pal = palette if palette in PALETTES else rng.choice(list(PALETTES))
     p = PALETTES[pal]
@@ -617,7 +618,10 @@ def render(W, H, seed=None, palette=None, crt_k=0.14, busy=0.55,
     ss = 2 if W2 * H2 > 8_000_000 else 3
 
     c = Canvas(W2, H2, ss)
-    compose(c, W2, H2, rng, busy=busy, wordmark=wordmark)
+    if scene == "legacy":
+        compose(c, W2, H2, rng, busy=busy, wordmark=wordmark)
+    else:
+        compose_terminal(c, W2, H2, rng, scene=scene, busy=busy, wordmark=wordmark)
     mask = c.img.resize((W2, H2), Image.LANCZOS)
     m = np.asarray(mask).astype(np.float32) / 255.0
 
@@ -658,6 +662,8 @@ def render(W, H, seed=None, palette=None, crt_k=0.14, busy=0.55,
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--scene", choices=("auto", *SCENES, "legacy"), default="auto",
+                    help="composed terminal subject; legacy restores scattered widgets")
     ap.add_argument("--size", default="5120x1440", help="WIDTHxHEIGHT")
     ap.add_argument("--count", type=int, default=1)
     ap.add_argument("--seed", type=int, default=None)
@@ -685,7 +691,7 @@ def main():
         name = os.path.join(a.out, f"wall_{W}x{H}_{seed}.png")
         pal = render(W, H, seed=seed, palette=a.palette,
                      crt_k=0.0 if a.flat else a.crt, busy=a.busy, wordmark=a.wordmark,
-                     scan=a.scan, scan_px=a.scan_px, out=name)
+                     scan=a.scan, scan_px=a.scan_px, out=name, scene=a.scene)
         print(f"{name}  [{pal}]")
 
 
